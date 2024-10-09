@@ -62,6 +62,7 @@ class _ChatPageState extends State<ChatPage> {
               child: DisplayMessage(
                 user: receiverName,
                 receiverUserId: receiverUserId,
+                senderUserId: auth.currentUser?.uid ?? '',
                 // Pass the receiver user ID
               ),
             ),
@@ -97,11 +98,15 @@ class _ChatPageState extends State<ChatPage> {
                   IconButton(
                     onPressed: () async {
                       if (messageController.text.isNotEmpty) {
+
+
+
                         // Create the message object
                         Message newMessage = Message(
                           message: messageController.text.trim(),
                           time: DateTime.now(),
                           senderName: currentUserName ?? 'Unknown',
+                          senderId: auth.currentUser?.uid ?? '',
                           receiver: receiverName,
                         );
 

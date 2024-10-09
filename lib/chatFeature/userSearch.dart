@@ -9,10 +9,11 @@ import '../views/constants/loading.dart';
 class UserSearchDelegate extends SearchDelegate {
 
 
-
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   AuthService authService = AuthService();
   final FirebaseAuth auth = FirebaseAuth.instance;
+
+
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -103,6 +104,7 @@ class UserSearchDelegate extends SearchDelegate {
           .collection('User')
           .where('name', isGreaterThanOrEqualTo: query)
           .where('name', isLessThanOrEqualTo: query + '\uf8ff')
+
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {

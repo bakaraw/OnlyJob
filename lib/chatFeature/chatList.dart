@@ -24,6 +24,9 @@ class _UserListPageState extends State<UserListPage> {
   List<String> pendingContacts = [];
   Stream<QuerySnapshot>? contactsStream;
   Stream<QuerySnapshot>? pendingStream;
+  List<String> contactProfilePictures = [];
+  List<String> pendingProfilePictures = [];
+
 
   @override
   void initState() {
@@ -31,23 +34,20 @@ class _UserListPageState extends State<UserListPage> {
     fetchContactsAndPending();
   }
 
-  // Fetch both contacts and pending requests, with null handling
   Future<void> fetchContactsAndPending() async {
     String currentUserId = auth.currentUser!.uid;
 
     DocumentSnapshot userDoc = await firestore.collection('User').doc(currentUserId).get();
 
     if (userDoc.exists) {
-      // Safely get contacts and pending requests
-      // Safely get contacts and pending requests
-      List<dynamic> contactList = (userDoc.data() as Map<String, dynamic>?)?['contacts'] ?? [];  // Null-safe access
+      List<dynamic> contactList = (userDoc.data() as Map<String, dynamic>?)?['contacts'] ?? [];
       List<dynamic> pendingList = (userDoc.data() as Map<String, dynamic>?)?['pending'] ?? [];
 
       contacts = List<String>.from(contactList);
       pendingContacts = List<String>.from(pendingList);
 
-      // Update contact and pending streams, with null checks
       if (contacts.isNotEmpty) {
+        await fetchProfilePictures(contacts, isPending: false);
         setState(() {
           contactsStream = firestore.collection('User')
               .where(FieldPath.documentId, whereIn: contacts)
@@ -60,6 +60,7 @@ class _UserListPageState extends State<UserListPage> {
       }
 
       if (pendingContacts.isNotEmpty) {
+        await fetchProfilePictures(pendingContacts, isPending: true);
         setState(() {
           pendingStream = firestore.collection('User')
               .where(FieldPath.documentId, whereIn: pendingContacts)
@@ -71,6 +72,30 @@ class _UserListPageState extends State<UserListPage> {
         });
       }
     }
+  }
+
+  Future<void> fetchProfilePictures(List<String> names, {bool isPending = false}) async {
+    List<String> profilePictures = [];
+
+    for (var uid in names) {
+      DocumentSnapshot userDoc = await firestore.collection('User').doc(uid).get();
+
+      if (userDoc.exists) {
+        var userData = userDoc.data() as Map<String, dynamic>?;
+        if (userData != null && userData.containsKey('profile_picture')) {
+          profilePictures.add(userData['profile_picture']);
+        }
+      }
+    }
+
+    // Update the appropriate list (contacts or pending contacts)
+    setState(() {
+      if (isPending) {
+        pendingProfilePictures = profilePictures;
+      } else {
+        contactProfilePictures = profilePictures;
+      }
+    });
   }
 
   // Accept a pending request (move from pending to contacts)
@@ -129,7 +154,7 @@ class _UserListPageState extends State<UserListPage> {
             onPressed: () async {
               final result = await showSearch(context: context, delegate: UserSearchDelegate());
               if (result != null) {
-               await fetchContactsAndPending(); // To refresh the contact list display
+                await fetchContactsAndPending(); // To refresh the contact list display
               }
             },
           ),
@@ -155,6 +180,8 @@ class _UserListPageState extends State<UserListPage> {
                         }
                         if (pendingSnapshot.connectionState == ConnectionState.waiting) {
                           return Center(child: Loading());
+                         // return Center(child: CircularProgressIndicator());
+
                         }
 
                         if (pendingSnapshot.data!.docs.isEmpty) {
@@ -167,6 +194,11 @@ class _UserListPageState extends State<UserListPage> {
                             String uid = document.id;
 
                             return ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage: userData?['profile_picture'] != null
+                                    ? NetworkImage(userData?['profile_picture'])
+                                    : AssetImage('assets/default_profile.png') as ImageProvider,
+                              ),
                               title: Text(userData?['name'] ?? 'No Name', style: usernameStyle,),  // Null-safe access
                               subtitle: Text(userData?['email'] ?? 'No Email', style: emailStyle,),  // Null-safe access
                               trailing: Row(
@@ -217,6 +249,11 @@ class _UserListPageState extends State<UserListPage> {
                     String uid = document.id;
 
                     return ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: userData?['profile_picture'] != null
+                            ? NetworkImage(userData?['profile_picture'])
+                            : AssetImage('assets/default_profile.png') as ImageProvider,
+                      ),
                       title: Text(userData?['name'] ?? 'No Name', style: usernameStyle,),  // Null-safe access
                       subtitle: Text(userData?['email'] ?? 'No Email', style: emailStyle,),  // Null-safe access
                       onTap: () {
